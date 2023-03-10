@@ -1,70 +1,158 @@
-"""A Markov chain generator that can tweet random messages."""
+"""Generate Markov text from text files."""
+
+from random import choice, randint
 
 import sys
-from random import choice
 
+input_path = sys.argv[1]
 
-def open_and_read_file(filenames):
-    """Take list of files. Open them, read them, and return one long string."""
+def open_and_read_file(file_path=input_path):
+    """Take file path as string; return text as string.
 
-    body = ''
-    for filename in filenames:
-        text_file = open(filename)
-        body = body + text_file.read()
-        text_file.close()
+    Takes a string that is a file path, opens the file, and turns
+    the file's contents as one string of text.
+    """
 
-    return body
+    # open file
+    with open(file_path) as file:
 
+        # add everything in file to text as one string
+        text = file.read()
+
+    # return string of all the text
+    return text
 
 def make_chains(text_string):
-    """Take input text as string; return dictionary of Markov chains."""
+    """Take input text as string; return dictionary of Markov chains.
 
+    A chain will be a key that consists of a tuple of (word1, word2)
+    and the value would be a list of the word(s) that follow those two
+    words in the input text.
+
+    For example:
+
+        >>> chains = make_chains('hi there mary hi there juanita')
+
+    Each bigram (except the last) will be a key in chains:
+
+        >>> sorted(chains.keys())
+        [('hi', 'there'), ('mary', 'hi'), ('there', 'mary')]
+
+    Each item in chains is a list of all possible following words:
+
+        >>> chains[('hi', 'there')]
+        ['mary', 'juanita']
+
+        >>> chains[('there','juanita')]
+        [None]
+    """
+    n = int(input('How many words do you want in your n-gram? Use an integer: '))
+
+    # create list of words, splitting text string at each whitespace
+    words = text_string.split()
+
+    # create empty dictionary
     chains = {}
 
-    words = text_string.split()
-    for i in range(len(words) - 2):
-        key = (words[i], words[i + 1])
-        value = words[i + 2]
+    # iterate over index values
+    for i in range(len(words) - n):
 
-        if key not in chains:
-            chains[key] = []
+        # define n number of items in tuple
+        tuple_list = []
+        for j in range(n):
+            nth_word = words[i + j]
+            tuple_list.append(nth_word)
 
-        chains[key].append(value)
+        ngram = tuple(tuple_list)
+        list_word = words[i + n] 
 
+        # create tuple: next word dict entry. initialize list if tuple is new, add list word to list.
+        chains[ngram] = chains.get(ngram, []) + [list_word]
+    
+    print(chains)
+    # return the chains dictionary
     return chains
 
 
 def make_text(chains):
-    """Take dictionary of Markov chains; return random text."""
+    """Return text from chains."""
 
-    keys = list(chains.keys())
-    key = choice(keys)
+    # initialize blank words list
+    words = []
 
-    words = [key[0], key[1]]
-    while key in chains:
-        # Keep looping until we have a key that isn't in the chains
-        # (which would mean it was the end of our original text).
+    # Get first tuple
+    # for key in chains:
+    #     ngram = key
+    #     words.extend(list(ngram))
+    #     break
 
-        # Note that for long texts (like a full book), this might mean
-        # it would run for a very long time.
+    # Get random first tuple starting with a capital letter 
+    while True: 
 
-        word = choice(chains[key])
-        words.append(word)
-        key = (key[1], word)
+        # use choice to get random tuple from chains
+        ngram = choice(list(chains))
+
+        # check if first letter of first word in tuple is uppercase
+        if ngram[0][0].isupper():
+
+            # add tuple to the words list
+            words.extend(list(ngram))
+
+            # leave the while loop
+            break
+    
+    while True:
+        
+        # if (1st word, 2nd word) tuple exists in chains
+        if ngram in chains:
+
+            # find random next word by using previous two words as tuple and next word from values
+            random_value_word = choice(chains[ngram])
+            
+            # add the random word to 'words' list
+            words.append(random_value_word)
+
+            # create empty list for reassigning tuples
+            tuple_list = []
+
+            # loop through index values for ngram tuple
+            for i in range(len(ngram)):
+
+                # if i is any index but the final index
+                if i < len(ngram) - 1:
+
+                    # reassign tuple value, move value by one
+                    tuple_list.append(ngram[i+1])
+
+                # if i is the final index value
+                else:
+
+                    # make last value in tuple the new word
+                    tuple_list.append(random_value_word)
+            
+            # make a tuple out of the list
+            ngram = tuple(tuple_list)
+            
+            # if last character of last word in ngram is a punctuation mark, randomly choose whether to break out of while loop
+            if ngram[-1][-1] in (".", "?", "!"):
+                x = randint(0,1)
+                if x == 0:
+                    break
+        
+        # else break out of loop
+        else: 
+            break
 
     return ' '.join(words)
 
 
-# Get the filenames from the user through a command line prompt, ex:
-# python markov.py green-eggs.txt shakespeare.txt
-filenames = sys.argv[1:]
-
-if not filenames:
-    print("Please provide a filename on the command line! Ex. python3 markov.py green-eggs.txt")
-    exit(1)
-
-# Open the files and turn them into one long string
-text = open_and_read_file(filenames)
+# Open the file and turn it into one long string
+input_text = open_and_read_file()
 
 # Get a Markov chain
-chains = make_chains(text)
+chains = make_chains(input_text)
+
+# Produce random text
+random_text = make_text(chains)
+
+print(random_text)
